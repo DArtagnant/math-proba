@@ -1,30 +1,61 @@
 from matplotlib import pyplot as plt
 
-text_place = None
+WAIT_TIME = 0.01
 
 def subplots():
     return plt.subplots()
 
-def add_bars(ax, bars, labels):
-    for n, (bar, label) in enumerate(zip(bars, labels)):
-        mbar = ax.bar(n, bar)
-        ax.bar_label(mbar, label_type='center')
+class Refresher:
+    def __init__(self, fig, ax):
+        self.fig = fig
+        self.ax = ax
+        self._listener = []
 
-def add_text(ax, text_label):
-    text_place.set_text(text_label)
+    def add_listener(self, listener):
+        self._listener.append(listener)
+        return listener
+    
+    def init_elem(self):
+        for l in self._listener:
+            l.init_elem(self.fig, self.ax)
+        plt.ion()
+        plt.show()
+        plt.pause(WAIT_TIME)
+    
+    def update(self):
+        if any((l.need_update() for l in self._listener)):
+            for l in self._listener:
+                l.update(self.fig, self.ax)
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
 
-def refresh_show(fig, ax, callback):
-    global text_place
-    text_place = ax.text(0.5, 0.02, "")
-    wait_wanted = False
-    def refresh_inner():
-        nonlocal wait_wanted
-        ax.clear()
-        ax.set_xticklabels([])
-        wait_wanted = True
-        return fig, ax
-    while True:
-        callback(refresh_inner)
-        if wait_wanted:
-            wait_wanted = False
-            plt.pause(0.00005)
+
+class UpdatableBar:
+    def __init__(self, name):
+        self._name = name
+        self._value = 0
+        self._need_refresh = False
+
+    @staticmethod
+    def create_bars(refresher, *names):
+        return (refresher.add_listener(UpdatableBar(name)) for name in names)
+
+    @property
+    def value(self):
+        return self._value
+    
+    @value.setter
+    def value(self, value):
+        self._need_refresh = True
+        self._value = value
+    
+    def init_elem(self, fig, ax):
+        self.bar = ax.bar(self._name, self._value)[0]
+    
+    def need_update(self):
+        return self._need_refresh
+    
+    def update(self, fig, ax):
+        self.bar.set_height(self._value)
+        ax.set_ylim(0, max(self._value * 1.1, ax.get_ylim()[1]))
+        self._need_refresh = False
