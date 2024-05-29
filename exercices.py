@@ -26,14 +26,14 @@ def ex20_bonus():
     ex_type_2_bars("gagné", "perdu", partie_ex20)
 
 def ex20():
-    gain = 5
-    tour = 1
+    gain = 0
+    tour = 0
     while True:
+        tour += 1
         if partie_ex20():
-            gain += 10
+            gain += 5
         else:
             gain -= 5
-        tour += 1
         if tour % 200000 == 0:
             print(f"Gains : {gain}, Moyenne par tour : {gain / tour}")
 
